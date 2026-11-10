@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>로버츠가 잡음에 약한 이유 — 두 가지 실험 인터랙티브</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+  :root { --cell: 46px; --gap: 3px; }
+  * { box-sizing: border-box; }
+  body { font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; margin: 0; background: #fafbfc; color: #222; }
+  header { background: #1f2937; color: #fff; padding: 22px 32px; }
+  header h1 { margin: 0 0 6px; font-size: 22px; }
+  header p { margin: 2px 0; font-size: 13px; color: #cbd5e1; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 32px 60px; }
+  section { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 24px; margin-bottom: 22px; }
+  h2 { font-size: 18px; margin: 0 0 12px; border-left: 5px solid #dc2626; padding-left: 10px; }
+  h3 { font-size: 15px; margin: 16px 0 8px; }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .tex { font-size: 15px; }
+  .grid5 { display: grid; grid-template-columns: repeat(5, var(--cell)); gap: var(--gap); }
+  .cell { width: var(--cell); height: var(--cell); display: flex; align-items: center; justify-content: center;
+          font-size: 12.5px; font-variant-numeric: tabular-nums; border-radius: 4px; border: 2px solid transparent; }
+  .cell.mark { border-color: #f59e0b; box-shadow: 0 0 0 2px #f59e0b55; }
+  .grid-label { font-size: 13px; font-weight: 600; margin-bottom: 6px; text-align: center; }
+  .grid-sub { font-size: 11.5px; color: #6b7280; text-align: center; margin-top: 5px; line-height: 1.5; }
+  .panel { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .ctl { margin: 10px 0; font-size: 14px; }
+  .ctl input[type=range] { width: 240px; vertical-align: middle; }
+  .readout { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 10px 16px; font-size: 14.5px; line-height: 1.8; margin-top: 12px; }
+  .pos { color: #1d4ed8; font-weight: 700; }
+  .neg { color: #b91c1c; font-weight: 700; }
+  .bad { color: #b91c1c; font-weight: 700; }
+  .ok  { color: #16a34a; font-weight: 700; }
+  table.sum { border-collapse: collapse; width: 100%; font-size: 13.5px; margin-top: 8px; }
+  table.sum th, table.sum td { border: 1px solid #d1d5db; padding: 7px 10px; text-align: center; }
+  table.sum th { background: #f1f5f9; }
+  table.sum td.l { text-align: left; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 13.5px; }
+  .bar-row .lbl { width: 190px; text-align: right; }
+  .bar-row .trk { flex: 1; background: #f1f5f9; border-radius: 4px; height: 24px; position: relative; }
+  .bar-row .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; transition: width .15s; }
+  .bar-row .val { width: 130px; font-variant-numeric: tabular-nums; }
+  button.gen { padding: 7px 14px; border: 1px solid #2563eb; background: #2563eb; color: #fff; border-radius: 6px; cursor: pointer; font-size: 13.5px; }
+  canvas { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
+  footer { text-align: center; color: #9ca3af; font-size: 12px; padding: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>로버츠가 잡음에 약한 이유 — 두 실험을 직접 돌려 보기</h1>
+  <p>핵심 사실 하나: 로버츠 출력 한 픽셀 = <b>정확히 2개 입력 픽셀의 차이</b>(가중치 +1, −1). 평균화가 없어서 잡음이 그대로 통과합니다.</p>
+  <p>모든 수치는 <code>Common/filters.py</code>의 <code>filter()</code> + <code>cv2.magnitude</code>와 동일한 연산으로 검증되었습니다.</p>
+</header>
+<main>
+
+<section>
+  <h2>실험 ① — 잡음 점 하나가 만드는 가짜 에지</h2>
+  <p style="font-size:14px; line-height:1.7">
+    전부 100인 평평한 영상의 가운데 (2,2)만 100 + Δ로 바꿉니다. 잡음 점이 영향을 주는 출력은 정확히 3곳뿐입니다
+    (자기 자리에서 두 마스크의 <b>중심</b>으로 2번, 아래행 양쪽 대각에서 <b>−1 이웃</b>으로 1번씩).
+    Δ 슬라이더를 움직여 보세요.
+  </p>
+  <div class="ctl">잡음 크기 Δ = <b id="dval">30</b> &nbsp; <input type="range" id="delta" min="0" max="80" value="30">
+    &nbsp;&nbsp;|&nbsp;&nbsp; 진짜 에지 대비 C = <b id="cval">80</b> &nbsp; <input type="range" id="contrast" min="20" max="160" value="80"></div>
+  <div class="panel" id="p1"></div>
+  <div class="readout" id="r1"></div>
+</section>
+
+<section>
+  <h2>실험 ② — 화면 전체 가우시안 잡음: 왜 표준편차가 σ√2 인가</h2>
+  <p style="font-size:14px; line-height:1.7">
+    모든 픽셀이 독립 <span class="tex" data-tex="\nu(i,j) \sim N(0, \sigma^2)"></span>일 때,
+    <span class="tex" data-tex="G_1 = \nu(i,j) - \nu(i-1,j-1)"></span>은 독립인 두 가우시안의 차이이므로
+  </p>
+  <p class="tex" data-tex="\mathrm{Var}(G_1) = \mathrm{Var}(X - Y) = \sigma^2 + \sigma^2 = 2\sigma^2 \;\Rightarrow\; \mathrm{std}(G_1) = \sigma\sqrt{2}"></p>
+  <p style="font-size:14px; line-height:1.7">
+    아래 히스토그램은 400×400 잡음 영상(158,404개 유효 픽셀)의 G₁ 실측 분포이고, 곡선은 이론 <span class="tex" data-tex="N(0, 2\sigma^2)"></span>입니다.
+    <b>임계값 T</b> 슬라이더를 움직이면 |G₁| &gt; T 인 가짜 에지 픽셀 수(실측 vs 이론)를 볼 수 있습니다.
+    파란 세로선은 진짜 에지 반응(대비 80)의 위치입니다.
+  </p>
+  <div class="ctl">σ = <b id="sval">10</b> &nbsp; <input type="range" id="sigma" min="5" max="20" value="10">
+    &nbsp;&nbsp; <button class="gen" id="regen">잡음 다시 생성</button>
+    &nbsp;&nbsp;|&nbsp;&nbsp; 임계값 T = <b id="tval">40</b> &nbsp; <input type="range" id="thr" min="0" max="100" value="40"></div>
+  <canvas id="hist" width="900" height="300"></canvas>
+  <div class="readout" id="r2"></div>
+</section>
+
+<section>
+  <h2>비교 — 평균화가 있는 소벨은 왜 나은가</h2>
+  <p style="font-size:14px; line-height:1.7">
+    일반 원리: 독립 잡음 N개를 합하면 <b>신호는 N배</b>(같은 방향으로 더해짐), <b>잡음 표준편차는 √N배</b>(분산이 더해짐) → SNR은 √N배 개선.
+    소벨 Gx = <code>[1 0 −1; 2 0 −2; 1 0 −1]</code>은 에지를 따라 3픽셀을 (1,2,1)로 가중 평균한 뒤 차분합니다.
+  </p>
+  <div id="p3"></div>
+  <table class="sum">
+    <tr><th></th><th>신호 이득 (대비 C 에지)</th><th>잡음 이득 (표준편차)</th><th>SNR (C=80, σ=10)</th><th>최소 검출 대비 (3σ 기준)</th></tr>
+    <tr><td class="l"><b>로버츠</b> (2픽셀 차분)</td><td>1 × C = 80</td><td>σ√2 = 14.14</td><td>80 / 14.14 = <b>5.66</b></td><td class="bad">3 × 14.14 ≈ 42.4</td></tr>
+    <tr><td class="l"><b>소벨</b> (3픽셀 가중평균 후 차분)</td><td>4 × C = 320</td><td>σ√12 = 34.64</td><td>320 / 34.64 = <b>9.24</b></td><td class="ok">3 × 34.64 / 4 ≈ 26.0</td></tr>
+  </table>
+  <p style="font-size:13.5px; color:#374151; margin-top:10px">
+    소벨의 잡음 표준편차가 더 <i>크게</i> 나오는 것(34.6 &gt; 14.1)이 함정입니다 — 6개 픽셀을 더하니까요.
+    하지만 신호가 4배로 더 크게 불어나므로 <b>비율(SNR)</b>로 보면 소벨이 1.63배 좋고, 같은 잡음에서 더 약한 에지(대비 26~42)까지 구분할 수 있습니다.
+  </p>
+</section>
+
+</main>
+<footer>생성: Copilot — chap07 로버츠 잡음 취약성 시각화 · 수치는 Common.filters.filter + cv2.magnitude로 검증됨</footer>
+
+<script>
+// ---------- 공통 ----------
+const N = 5;
+function zeros(){ return Array.from({length:N}, () => Array(N).fill(0)); }
+function roberts(img){
+  const g1 = zeros(), g2 = zeros(), mag = zeros();
+  for (let i = 1; i < N-1; i++) for (let j = 1; j < N-1; j++) {
+    g1[i][j] = img[i][j] - img[i-1][j-1];
+    g2[i][j] = img[i][j] - img[i-1][j+1];
+  }
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) mag[i][j] = Math.hypot(g1[i][j], g2[i][j]);
+  return {g1, g2, mag};
+}
+function signedStyle(v, scale){
+  const a = 0.12 + 0.75*Math.min(Math.abs(v)/scale, 1);
+  if (v > 0) return `background: rgba(37,99,235,${a})`;
+  if (v < 0) return `background: rgba(220,38,38,${a})`;
+  return 'background:#f3f4f6; color:#9ca3af';
+}
+function grayStyle(v, maxv){
+  const g = Math.round(255 - 255*Math.min(Math.abs(v)/maxv,1));
+  return `background: rgb(${g},${g},${g})`;
+}
+function fmt(v){ return Math.abs(v % 1) > 1e-9 ? v.toFixed(1) : String(Math.round(v)); }
+function gridEl(mat, styleFn, markFn){
+  const g = document.createElement('div'); g.className = 'grid5';
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const c = document.createElement('div'); c.className = 'cell';
+    c.style.cssText = styleFn(mat[i][j]);
+    c.textContent = fmt(mat[i][j]);
+    if (markFn && markFn(i, j)) c.classList.add('mark');
+    g.appendChild(c);
+  }
+  return g;
+}
+function panel(label, sub, el){
+  const d = document.createElement('div');
+  const l = document.createElement('div'); l.className = 'grid-label'; l.innerHTML = label; d.appendChild(l);
+  d.appendChild(el);
+  if (sub){ const s = document.createElement('div'); s.className = 'grid-sub'; s.style.maxWidth='250px'; s.innerHTML = sub; d.appendChild(s); }
+  return d;
+}
+
+// ---------- 실험 1 ----------
+function renderExp1(){
+  const D = +document.getElementById('delta').value;
+  const C = +document.getElementById('contrast').value;
+  document.getElementById('dval').textContent = D;
+  document.getElementById('cval').textContent = C;
+  const img = Array.from({length:N}, () => Array(N).fill(100));
+  img[2][2] = 100 + D;
+  const r = roberts(img);
+  const p = document.getElementById('p1'); p.innerHTML = '';
+  p.appendChild(panel('입력 I', '가운데만 100+Δ', gridEl(img, v => grayStyle(v, 255), (i,j)=>i===2&&j===2)));
+  p.appendChild(panel('G₁ (↘ 차분)', '', gridEl(r.g1, v => signedStyle(v, 80))));
+  p.appendChild(panel('G₂ (↗ 차분)', '', gridEl(r.g2, v => signedStyle(v, 80))));
+  p.appendChild(panel('M = √(G₁²+G₂²)', '주황 테두리 = 잡음이 기여한 3곳', gridEl(r.mag, v => grayStyle(v, 80),
+    (i,j)=> (i===2&&j===2)||(i===3&&j===1)||(i===3&&j===3) )));
+  const fake = D*Math.SQRT2, ratio = C > 0 ? fake/C*100 : 0;
+  document.getElementById('r1').innerHTML =
+    `가짜 에지 최대 세기: M(2,2) = √(Δ² + Δ²) = Δ√2 = ${D} × 1.4142 = <b class="bad">${fake.toFixed(1)}</b><br>` +
+    `진짜 수직 에지(대비 C) 세기: M = C = <b>${C}</b> &nbsp;→&nbsp; 가짜/진짜 = ${fake.toFixed(1)} / ${C} = <b class="bad">${ratio.toFixed(1)}%</b><br>` +
+    `<span style="font-size:13px">잡음 점은 두 마스크의 중심에서 두 번 세어져 √2배 "증폭"됩니다. 반면 수직 에지는 한 마스크에만 걸려 1배. 그래서 Δ = C/2.83만 돼도 같은 세기가 나옵니다.</span>`;
+}
+['delta','contrast'].forEach(id => document.getElementById(id).addEventListener('input', renderExp1));
+
+// ---------- 실험 2 ----------
+let seed = 12345;
+function xorshift(){ seed ^= seed<<13; seed ^= seed>>>17; seed ^= seed<<5; seed >>>= 0; return seed/4294967296; }
+function gauss(){ let u = 0; while (u === 0) u = xorshift(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*xorshift()); }
+function erf(x){ const s = Math.sign(x); x = Math.abs(x);
+  const t = 1/(1+0.3275911*x);
+  const y = 1 - ((((1.061405429*t - 1.453152027)*t + 1.421413741)*t - 0.284496736)*t + 0.254829592)*t*Math.exp(-x*x);
+  return s*y; }
+const erfc = x => 1 - erf(x);
+
+let g1vals = null, g2vals = null, sobvals = null, curSigma = 10;
+function genNoise(){
+  const W = 400, H = 400, sg = curSigma;
+  const img = new Float32Array(W*H);
+  for (let k = 0; k < img.length; k++) img[k] = sg*gauss();
+  const g1 = [], g2 = [], sob = [];
+  for (let i = 1; i < H-1; i++) for (let j = 1; j < W-1; j++) {
+    const c = img[i*W+j];
+    g1.push(c - img[(i-1)*W+(j-1)]);
+    g2.push(c - img[(i-1)*W+(j+1)]);
+    sob.push((img[(i-1)*W+(j+1)] + 2*img[i*W+(j+1)] + img[(i+1)*W+(j+1)])
+           - (img[(i-1)*W+(j-1)] + 2*img[i*W+(j-1)] + img[(i+1)*W+(j-1)]));
+  }
+  g1vals = g1; g2vals = g2; sobvals = sob;
+}
+function std(a){ let m = 0; for (const v of a) m += v; m /= a.length;
+  let s = 0; for (const v of a) s += (v-m)*(v-m); return Math.sqrt(s/a.length); }
+
+function renderExp2(){
+  const sg = curSigma, s = sg*Math.SQRT2;
+  const T = +document.getElementById('thr').value;
+  document.getElementById('tval').textContent = T;
+  document.getElementById('sval').textContent = sg;
+
+  const cv = document.getElementById('hist'), ctx = cv.getContext('2d');
+  const Wpx = cv.width, Hpx = cv.height, padL = 50, padB = 30, padT = 14;
+  ctx.clearRect(0, 0, Wpx, Hpx);
+  const range = Math.max(70, 4.2*s), nb = 101, bw = 2*range/nb;
+  const bins = new Array(nb).fill(0);
+  for (const v of g1vals){ let k = Math.floor((v+range)/bw); if (k < 0) k = 0; if (k >= nb) k = nb-1; bins[k]++; }
+  const maxCnt = Math.max(...bins);
+  const x2px = x => padL + (x+range)/(2*range)*(Wpx-padL-10);
+  const y2px = y => Hpx-padB - y/(maxCnt*1.08)*(Hpx-padB-padT);
+  // 막대
+  ctx.fillStyle = 'rgba(37,99,235,0.55)';
+  for (let k = 0; k < nb; k++){
+    const x0 = x2px(-range + k*bw), x1 = x2px(-range + (k+1)*bw);
+    ctx.fillRect(x0, y2px(bins[k]), x1-x0-0.5, Hpx-padB - y2px(bins[k]));
+  }
+  // 이론 곡선 N(0, 2σ²)
+  ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2; ctx.beginPath();
+  for (let px = padL; px < Wpx-10; px++){
+    const x = (px-padL)/(Wpx-padL-10)*2*range - range;
+    const pdf = Math.exp(-x*x/(2*s*s))/(s*Math.sqrt(2*Math.PI));
+    const y = y2px(pdf*bw*g1vals.length);
+    px === padL ? ctx.moveTo(px, y) : ctx.lineTo(px, y);
+  }
+  ctx.stroke();
+  // 축 눈금
+  ctx.fillStyle = '#6b7280'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  for (let x = -Math.floor(range/10)*10; x <= range; x += 20){
+    ctx.fillText(x, x2px(x), Hpx-padB+16);
+    ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x2px(x), padT); ctx.lineTo(x2px(x), Hpx-padB); ctx.stroke();
+  }
+  // 진짜 에지 위치 ±80
+  for (const e of [-80, 80]){
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.moveTo(x2px(e), padT); ctx.lineTo(x2px(e), Hpx-padB); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#2563eb'; ctx.fillText('진짜 에지 ' + (e>0?'+':'') + e, x2px(e), padT+6);
+  }
+  // 임계값 ±T
+  for (const e of [-T, T]){
+    ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x2px(e), padT); ctx.lineTo(x2px(e), Hpx-padB); ctx.stroke();
+  }
+  ctx.fillStyle = '#16a34a'; ctx.fillText('T=' + T, x2px(T), padT+22);
+
+  const mstd = std(g1vals);
+  const cnt = g1vals.reduce((a, v) => a + (Math.abs(v) > T ? 1 : 0), 0);
+  const pTheory = erfc(T/(s*Math.SQRT2));
+  const mags = [];
+  for (let k = 0; k < g1vals.length; k++) mags.push(Math.hypot(g1vals[k], g2vals[k]));
+  const mmax = Math.max(...mags);
+  document.getElementById('r2').innerHTML =
+    `실측 std(G₁) = <b>${mstd.toFixed(2)}</b> &nbsp;vs&nbsp; 이론 σ√2 = <b>${s.toFixed(2)}</b> &nbsp;·&nbsp; SNR = 80 / ${mstd.toFixed(2)} = <b>${(80/mstd).toFixed(2)}</b><br>` +
+    `|G₁| &gt; T = ${T} 인 가짜 에지: 실측 <b class="bad">${cnt.toLocaleString()}개</b> (${(cnt/g1vals.length*100).toFixed(3)}%) &nbsp;vs&nbsp; ` +
+    `이론 ${Math.round(pTheory*g1vals.length).toLocaleString()}개 (${(pTheory*100).toFixed(3)}%) &nbsp;← P(|Z| &gt; T/(σ√2)) = erfc(T/2σ)<br>` +
+    `크기 M = √(G₁²+G₂²)까지 보면: 순수 잡음만으로도 M 최댓값 = <b class="bad">${mmax.toFixed(1)}</b> — 진짜 에지(80)와 겹치거나 넘을 수 있습니다.`;
+}
+document.getElementById('thr').addEventListener('input', renderExp2);
+document.getElementById('sigma').addEventListener('input', e => { curSigma = +e.target.value; genNoise(); renderExp2(); });
+document.getElementById('regen').addEventListener('click', () => { seed = (Math.random()*1e9)|0; genNoise(); renderExp2(); });
+
+// ---------- 비교(소벨) ----------
+function renderExp3(){
+  const sR = std(g1vals), sS = std(sobvals);
+  const snrR = 80/sR, snrS = 320/sS;
+  const rows = [
+    ['로버츠: 신호 이득 (×C)', 1, 4, '#2563eb', '×1'],
+    ['소벨: 신호 이득 (×C)', 4, 4, '#2563eb', '×4 = (1+2+1)'],
+    ['로버츠: 잡음 std', sR, 40, '#dc2626', sR.toFixed(2) + ' (이론 σ√2 = ' + (curSigma*Math.SQRT2).toFixed(2) + ')'],
+    ['소벨: 잡음 std', sS, 40, '#dc2626', sS.toFixed(2) + ' (이론 σ√12 = ' + (curSigma*Math.sqrt(12)).toFixed(2) + ')'],
+    ['로버츠: SNR', snrR, 10, '#16a34a', snrR.toFixed(2)],
+    ['소벨: SNR', snrS, 10, '#16a34a', snrS.toFixed(2) + '  → ' + (snrS/snrR).toFixed(2) + '배 개선'],
+  ];
+  const p = document.getElementById('p3'); p.innerHTML = '';
+  for (const [lbl, v, maxv, col, val] of rows){
+    const d = document.createElement('div'); d.className = 'bar-row';
+    d.innerHTML = `<div class="lbl">${lbl}</div><div class="trk"><div class="fill" style="width:${(v/maxv*100).toFixed(1)}%; background:${col}"></div></div><div class="val">${val}</div>`;
+    p.appendChild(d);
+  }
+}
+
+if (window.katex) document.querySelectorAll('.tex').forEach(el => {
+  try { katex.render(el.dataset.tex, el, {throwOnError:false}); } catch(e) { el.textContent = el.dataset.tex; }
+});
+else document.querySelectorAll('.tex').forEach(el => el.textContent = el.dataset.tex);
+
+genNoise();
+renderExp1();
+renderExp2();
+renderExp3();
+</script>
+</body>
+</html>

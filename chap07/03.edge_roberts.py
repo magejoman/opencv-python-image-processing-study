@@ -1,5 +1,7 @@
 import numpy as np, cv2
 from  Common.filters import filter
+import math
+
 
 def differential(image, data1, data2):
     mask1 = np.array(data1, np.float32).reshape(3, 3)

@@ -1,0 +1,22 @@
+# {{TITLE}} 설정
+# 코드에 숫자를 박지 말고 여기에 둔다. 무엇을 바꿨는지 git 기록에 남는다.
+
+input:
+  folder: data/raw        # 처리할 이미지 폴더 (프로젝트 폴더 기준)
+  max_side: 1280          # 긴 변이 이보다 크면 줄여서 처리 (폰 사진은 4000px 안팎)
+
+# 파이프라인 파라미터 — main.py 의 pipeline(img, **params) 인자와 이름이 같아야 한다
+params:
+  blur_ksize: 5
+  canny_low: 50
+  canny_high: 150
+
+# --tune 모드의 트랙바 범위: [최소, 최대, 간격]
+# 간격 2 에 최소가 홀수면 홀수만 나온다 (GaussianBlur 커널 크기는 홀수여야 함)
+tune:
+  blur_ksize: [1, 31, 2]
+  canny_low: [0, 255, 1]
+  canny_high: [0, 255, 1]
+
+output:
+  save_stages: true       # 이미지마다 중간 결과 모자이크를 results/stages/ 에 저장

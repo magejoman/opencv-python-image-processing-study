@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cvkit"
+version = "0.1.0"
+description = "프로젝트 실습용 공용 도구 (입출력, 시각화, 비교, 시간 측정, 튜닝)"
+requires-python = ">=3.9"
+# opencv 는 이미 설치된 opencv-contrib-python 을 그대로 쓴다.
+# 그래서 설치할 때 반드시 --no-deps 를 붙인다 (opencv-python 이 겹쳐 깔리면 cv2 가 깨진다).
+dependencies = [
+    "numpy>=1.20",
+    "opencv-python>=4.5",
+    "pyyaml>=5.4",
+    "pillow>=9.0",
+]
+
+# projects/ 폴더의 cvkit 패키지 '한 벌'만 배포 대상으로 삼는다.
+[tool.setuptools]
+packages = ["cvkit"]

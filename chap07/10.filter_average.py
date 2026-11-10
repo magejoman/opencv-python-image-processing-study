@@ -25,6 +25,6 @@ box_img  = cv2.boxFilter(image, ddepth=-1, ksize=(5, 5))   # OpenCV의 박스 �
 
 cv2.imshow("image", image),
 cv2.imshow("avg_img", avg_img)
-cv2.imshow("blur_img", box_img)
+cv2.imshow("blur_img", blur_img) # 검은 액자
 cv2.imshow("box_img", box_img)
 cv2.waitKey(0)

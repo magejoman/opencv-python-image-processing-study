@@ -5,8 +5,8 @@ def getGaussianMask(ksize, sigmaX, sigmaY):
     if sigmaX <= 0: sigmaX = sigma[0]
     if sigmaY <= 0: sigmaY = sigma[1]
 
-    x = np.arange(0, ksize[0]+1, 1) - ksize[0] // 2
-    y = np.arange(0, ksize[1]+1, 1) - ksize[1] // 2
+    x = np.arange(0, ksize[0], 1) - ksize[0] // 2
+    y = np.arange(0, ksize[1], 1) - ksize[1] // 2
     x, y = np.meshgrid(x, y)
     ratio = 1 / (sigmaX*sigmaY * 2 * np.pi)
     v1 = x ** 2 / (2 * sigmaX ** 2)
@@ -23,9 +23,20 @@ gaussian_1dX = cv2.getGaussianKernel(ksize[0], 0, cv2.CV_32F)   # 가로 방향 
 gaussian_1dY = cv2.getGaussianKernel(ksize[1], 0, cv2.CV_32F)   # 세로 방향 마스크
 
 gauss_img1 = cv2.filter2D(image, -1, gaussian_2d)     # 사용자 생성 마스크 적용
-gauss_img2 = cv2.GaussianBlur(image, (0,0), 10.7, 1.3)
+gauss_img2 = cv2.GaussianBlur(image, (0,0), sigmaX=0.7, sigmaY=1.3)
 gauss_img3 = cv2.sepFilter2D(image, -1, gaussian_1dX, gaussian_1dY)
 
 titles = ['image','gauss_img1','gauss_img2','gauss_img3']
 [cv2.imshow(t, eval(t)) for t in titles]
 cv2.waitKey(0)
+
+
+## meshgrid 동작 확인
+# ksize = (17, 5)  # 크기는 가로x세로로 표현
+# x = np.arange(0, ksize[0]+1, 1) - ksize[0] // 2
+# y = np.arange(0, ksize[1]+1, 1) - ksize[1] // 2
+# print(f"x: {x}")
+# print(f"y: {y}")
+# print(f"x, y meshgrid:\n{x}\n{y}")
+# x, y = np.meshgrid(x, y)
+# print(f"x, y meshgrid after np.meshgrid:\n{x}\n{y}")

@@ -44,7 +44,26 @@ mask = np.array(data, np.float32).reshape(3, 3)
 blur1 = filter(image, mask)                                    # 회선 수행 - 화소 직접 접근
 blur2 = filter2(image, mask)                                   # 회선 수행
 
+# 보더를 만들어 영상 전 범위에 OpenCV 회선 블러 적용
+ycenter, xcenter = mask.shape[0] // 2, mask.shape[1] // 2
+padded = cv2.copyMakeBorder(image, ycenter, ycenter, xcenter, xcenter,
+                            cv2.BORDER_REPLICATE)
+filtered = cv2.filter2D(padded, cv2.CV_32F, mask)
+blur3 = filtered[ycenter:ycenter + image.shape[0],
+                 xcenter:xcenter + image.shape[1]]
+
+# OpenCV 블러링 함수 적용
+blur4 = cv2.blur(image, (3, 3))
+blur5 = cv2.GaussianBlur(image, (3, 3), 0)
+blur6 = cv2.pyrUp(cv2.pyrDown(image), dstsize=(image.shape[1], image.shape[0]))
+
+
+
 cv2.imshow("image", image)
 cv2.imshow("blur1", blur1.astype("uint8"))
-cv2.imshow("blur2", cv2.convertScaleAbs(blur1))
+cv2.imshow("blur2", cv2.convertScaleAbs(blur2))
+cv2.imshow("blur3", cv2.convertScaleAbs(blur3))
+cv2.imshow("blur4 - cv2.blur", blur4)
+cv2.imshow("blur5 - cv2.GaussianBlur", blur5)
+cv2.imshow("blur6 - cv2.pyrDown", blur6)
 cv2.waitKey(0)

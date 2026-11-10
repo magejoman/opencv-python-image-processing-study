@@ -10,8 +10,10 @@ def median_filter(image, ksize):
             y1, y2 = i - center, i + center + 1             # 마스크 높이 범위
             x1, x2 = j - center, j + center + 1             # 마스크 너비 범위
             mask = image[y1:y2, x1:x2].flatten()            # 마스크 영역
-            sort_mask = cv2.sort(mask, cv2.SORT_EVERY_COLUMN).flat   # 정렬 수행
-            dst[i, j] = sort_mask[mask.size//2]                  # 출력화소로 지정
+            # sort_mask = cv2.sort(mask, cv2.SORT_EVERY_COLUMN).flat   # 정렬 수행 #1
+            # sort_mask = np.sort(mask)                               # 정렬 수행 #2
+            # dst[i, j] = sort_mask[mask.size//2]                  # 출력화소로 지정
+            dst[i, j] = np.median(mask)                           # 중앙값으로 출력화소 지정
     return dst
 
 def salt_pepper_noise(img, n):
@@ -34,3 +36,16 @@ cv2.imshow("noise", noise),
 cv2.imshow("median - User", med_img1)
 cv2.imshow("median - OpenCV", med_img2)
 cv2.waitKey(0)
+
+
+# # flatten 동작 확인
+# mask = np.array([[9, 5, 3],
+#                  [4, 8, 1],
+#                  [7, 2, 6]])
+# print(f"mask:\n{mask}")
+# print(f"mask.flatten():\n{mask.flatten()}")
+# print(f"mask.size: {mask.size}")
+# print(f"mask.flatten().size: {mask.flatten().size}")
+# # reshaped = mask.reshape((mask.size, -1)) # wrong
+# reshaped = mask.reshape(-1)
+# print(f"reshaped:\n{reshaped} | reshaped.shape: {reshaped.shape}")

@@ -21,6 +21,7 @@
     // Pylance(IntelliSense)도 같은 경로를 인식하도록 맞춘다.
     "python.analysis.extraPaths": [
         "${workspaceFolder}",
+        "${workspaceFolder}/projects",
         "${workspaceFolder}/chap11/header",
         "${workspaceFolder}/chap12/header"
     ],

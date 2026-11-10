@@ -12,6 +12,7 @@ OpenCV-Python-ImageProcessing/
 ├── chap02/ ... chap12/  ← 챕터별 실습 코드와 images/ 리소스
 │   ├── chap11/header/   ← chap11 전용 보조 모듈 (paint_*, haar_*)
 │   └── chap12/header/   ← chap12 전용 보조 모듈 (coin_*, plate_*)
+├── projects/            ← 교재 복습용 바닥부터 프로젝트 + 공용 도구 cvkit (projects/README.md 참고)
 ├── .vscode/             ← 실행 경로 설정 (settings.json, launch.json)
 └── pyproject.toml       ← Common 패키지 정의
 ```

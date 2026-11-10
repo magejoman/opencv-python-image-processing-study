@@ -31,3 +31,15 @@ _audit.json
 
 # Large generated model (>100MB, GitHub limit); restore from chap10/knn.xml.zip
 chap10/knn.xml
+
+# projects/: 원본 사진(용량 큼)과 다시 만들 수 있는 실행 결과는 커밋하지 않는다
+projects/*/data/raw/*
+!projects/*/data/raw/.gitkeep
+!projects/*/data/raw/gt.json
+projects/*/results/*
+!projects/*/results/.gitkeep
+# 합성 데이터는 tools/make_synthetic.py 로 언제든 똑같이 다시 만들 수 있다
+projects/*/data/synthetic/
+
+# Claude Code 세션 원본 로그(자동 export). 정리본은 study-notes/chapXX/*_session.md 에 있다
+.cc-history/

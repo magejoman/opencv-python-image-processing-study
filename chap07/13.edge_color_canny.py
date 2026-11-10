@@ -2,7 +2,8 @@ import cv2
 
 def onTrackbar(th):																	# 트랙바 콜백 함수
 	edge = cv2.GaussianBlur(gray, (5, 5), 0)         	# 가우시안 블러링
-	edge = cv2.Canny(edge, th, th*2, 5)						# 캐니 에지 검출
+	# edge = cv2.Canny(edge, th, th*2, 5)					# [원래 코드] 4번째 위치는 edges 자리 → 5가 무시되어 3×3으로 동작
+	edge = cv2.Canny(edge, th * 13, th * 26, apertureSize=5)	# 5×5 소벨은 크기가 약 13배 → 슬라이더 0~150을 5×5 단위로 환산 (6-8-d)
 
 	color_edge = cv2.copyTo(image, mask=edge)
 	dst = cv2.hconcat([image, color_edge])

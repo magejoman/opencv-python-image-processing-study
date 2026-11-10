@@ -1,0 +1,39 @@
+# P1. 문서 스캐너 설정
+# 코드에 숫자를 박지 말고 여기에 둔다. 무엇을 바꿨는지 git 기록에 남는다.
+
+input:
+  folder: data/synthetic  # 처음엔 합성 데이터로. 사진을 찍으면 data/raw 로 바꾼다
+  max_side: 1000          # 검출은 이 크기로 줄여서 한다 (빠르고, 잔무늬 엣지가 줄어든다)
+
+# Step 2 — find_document_quad 의 인자 (이름이 같아야 한다)
+detect:
+  blur_ksize: 5
+  canny_low: 50
+  canny_high: 150
+  morph_ksize: 5
+  approx_eps: 0.02
+  min_area_ratio: 0.1
+
+# python main.py --tune 의 트랙바 범위 [최소, 최대, 간격]  (detect 파라미터만)
+tune:
+  blur_ksize: [1, 31, 2]
+  canny_low: [0, 255, 5]
+  canny_high: [0, 255, 5]
+  morph_ksize: [1, 31, 2]
+  approx_eps: [0.005, 0.1, 0.005]
+
+# 어느 구현을 쓸지: opencv = OpenCV 함수 / mine = 직접 구현
+# 처음엔 opencv 로 파이프라인 전체를 돌려 보고, 각 Step 을 끝낼 때마다 mine 으로 바꾼다
+impl:
+  homography: opencv      # Step 4
+  warp: opencv            # Step 5
+  threshold: opencv       # Step 6
+
+output:
+  max_side: 1600          # 펼친 결과의 긴 변 최대 크기
+  threshold_block: 31     # Step 6 적응형 이진화 블록 크기 (홀수)
+  threshold_C: 10
+  save_stages: true       # 이미지마다 중간 결과 모자이크를 results/stages/ 에 저장
+
+eval:
+  success_px: 10          # 꼭짓점 평균 오차가 이 값(원본 해상도 px) 이하면 성공

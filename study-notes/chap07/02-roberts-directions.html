@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>로버츠 엣지 — 4가지 방향 엣지의 반응 (5×5 예시)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+  :root { --cell: 52px; --gap: 3px; }
+  * { box-sizing: border-box; }
+  body { font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; margin: 0; background: #fafbfc; color: #222; }
+  header { background: #1f2937; color: #fff; padding: 22px 32px; }
+  header h1 { margin: 0 0 6px; font-size: 22px; }
+  header p { margin: 2px 0; font-size: 13px; color: #cbd5e1; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 32px 60px; }
+  section { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 24px; margin-bottom: 22px; }
+  h2 { font-size: 18px; margin: 0 0 12px; border-left: 5px solid #2563eb; padding-left: 10px; }
+  h3 { font-size: 15px; margin: 18px 0 8px; }
+  .tex { font-size: 15px; }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .grid5 { display: grid; grid-template-columns: repeat(5, var(--cell)); gap: var(--gap); }
+  .cell { width: var(--cell); height: var(--cell); display: flex; align-items: center; justify-content: center;
+          font-size: 13px; font-variant-numeric: tabular-nums; border-radius: 4px; border: 2px solid transparent; }
+  .cell.clickable { cursor: pointer; }
+  .cell.clickable:hover { border-color: #f59e0b; }
+  .cell.sel { border-color: #f59e0b; box-shadow: 0 0 0 2px #f59e0b55; }
+  .cell.hl-pos { border-color: #2563eb; box-shadow: 0 0 0 3px #2563eb44; }
+  .cell.hl-neg { border-color: #dc2626; box-shadow: 0 0 0 3px #dc262644; }
+  .grid-label { font-size: 13px; font-weight: 600; margin-bottom: 6px; text-align: center; }
+  .grid-sub { font-size: 11.5px; color: #6b7280; text-align: center; margin-top: 5px; line-height: 1.5; }
+  .panel { display: flex; gap: 26px; flex-wrap: wrap; align-items: flex-start; }
+  .mini { display: inline-grid; grid-template-columns: repeat(3, 22px); gap: 1px; vertical-align: middle; margin-left: 6px; }
+  .mini div { width: 22px; height: 22px; font-size: 10.5px; display: flex; align-items: center; justify-content: center; background: #f1f5f9; border-radius: 2px; }
+  .mini .nz-b { background: #dbeafe; font-weight: 700; color: #1d4ed8; }
+  .mini .nz-r { background: #fee2e2; font-weight: 700; color: #b91c1c; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tabs button { padding: 8px 14px; border: 1px solid #d1d5db; background: #fff; border-radius: 20px; cursor: pointer; font-size: 13.5px; }
+  .tabs button.active { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 700; }
+  .calcbox { margin-top: 16px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px 16px; font-size: 14.5px; min-height: 48px; line-height: 1.7; }
+  .calcbox .hint { color: #92400e; font-size: 13px; }
+  .interp { margin-top: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 16px; font-size: 14px; line-height: 1.7; }
+  table.sum { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  table.sum th, table.sum td { border: 1px solid #d1d5db; padding: 8px 10px; text-align: center; }
+  table.sum th { background: #f1f5f9; }
+  table.sum td.l { text-align: left; }
+  .pos { color: #1d4ed8; font-weight: 700; }
+  .neg { color: #b91c1c; font-weight: 700; }
+  .zero { color: #9ca3af; }
+  .bar-wrap { display: flex; align-items: flex-end; gap: 30px; height: 150px; margin: 10px 0 4px; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar { width: 56px; border-radius: 4px 4px 0 0; transition: height .12s; }
+  .bar-val { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 320px; }
+  .ang-btns button { margin-right: 6px; padding: 5px 10px; font-size: 12.5px; border: 1px solid #d1d5db; border-radius: 14px; background: #fff; cursor: pointer; }
+  .ang-btns button:hover { background: #eff6ff; }
+  .flex-row { display: flex; gap: 36px; flex-wrap: wrap; align-items: flex-start; }
+  footer { text-align: center; color: #9ca3af; font-size: 12px; padding: 18px; }
+  ul.tight li { margin: 5px 0; font-size: 14px; line-height: 1.65; }
+</style>
+</head>
+<body>
+<header>
+  <h1>로버츠(Roberts) 엣지 — 수직 · 수평 · 대각선 2개, 각각 어떻게 나올까?</h1>
+  <p>5×5 이진 영상(0 = 검정, 255 = 흰색)에 교재 코드(<code>chap07/03.edge_roberts.py</code>, <code>Common/filters.py</code>)와 동일한 연산을 적용한 결과입니다.</p>
+  <p>출력 셀을 클릭하면 어떤 입력 픽셀들로 계산됐는지 하이라이트됩니다. 모든 수치는 Python으로 실제 계산해 검증한 값입니다.</p>
+</header>
+<main>
+
+<section>
+  <h2>1. 로버츠 연산자 = 대각선 방향 차분 2개</h2>
+  <p style="font-size:14.5px; line-height:1.8">
+    로버츠 마스크는 본래 2×2이지만, 교재 코드는 3×3 마스크 중심 앵커에 맞춰 심어둔 형태입니다.
+    0인 셀은 곱해도 사라지므로 실제로는 <b>중심 픽셀과 대각선 이웃 1개의 차이</b>만 계산합니다.
+  </p>
+  <div class="flex-row">
+    <div>
+      <div class="grid-label">마스크 1 — ↘ 방향 차분
+        <span class="mini"><div class="nz-r">−1</div><div>0</div><div>0</div><div>0</div><div class="nz-b">+1</div><div>0</div><div>0</div><div>0</div><div>0</div></span>
+      </div>
+      <p class="tex" data-tex="G_1(i,j) = I(i,j) - I(i-1,j-1)"></p>
+      <div class="grid-sub">중심(i,j)과 <b>왼쪽 위</b>(i−1,j−1)의 차이.<br>밝기가 ↘ 방향으로 변해야 반응.</div>
+    </div>
+    <div>
+      <div class="grid-label">마스크 2 — ↗ 방향 차분
+        <span class="mini"><div>0</div><div>0</div><div class="nz-r">−1</div><div>0</div><div class="nz-b">+1</div><div>0</div><div>0</div><div>0</div><div>0</div></span>
+      </div>
+      <p class="tex" data-tex="G_2(i,j) = I(i,j) - I(i-1,j+1)"></p>
+      <div class="grid-sub">중심(i,j)과 <b>오른쪽 위</b>(i−1,j+1)의 차이.<br>밝기가 ↗ 방향으로 변해야 반응.</div>
+    </div>
+    <div>
+      <div class="grid-label">최종 엣지 크기</div>
+      <p class="tex" data-tex="M(i,j) = \sqrt{G_1(i,j)^2 + G_2(i,j)^2} \;\;(\text{clip to } [0,255])"></p>
+      <div class="grid-sub"><code>cv2.magnitude(dst1, dst2)</code>에 해당.<br>부호를 없애고 두 방향 반응을 합침.</div>
+    </div>
+  </div>
+  <p style="font-size:13.5px; color:#374151; margin-top:14px">
+    ※ <code>Common.filters.filter()</code>는 마스크 중심이 영상 안에 완전히 들어오는 <b>i, j ∈ [1, 3]</b>만 계산하고 테두리(0·4행/열)는 0으로 둡니다.
+    아래 출력에서도 테두리는 전부 0입니다.
+  </p>
+</section>
+
+<section>
+  <h2>2. 5×5 예시 — 방향별 반응 (출력 셀을 클릭해 보세요)</h2>
+  <div class="tabs" id="tabs"></div>
+  <div id="case-body"></div>
+  <div class="calcbox" id="calcbox"><span class="hint">G₁, G₂, M 격자의 셀을 클릭하면 계산 과정이 여기에 표시됩니다. (파란 테두리 = +1이 곱해진 중심 픽셀, 빨간 테두리 = −1이 곱해진 대각선 이웃)</span></div>
+  <div class="interp" id="interp"></div>
+</section>
+
+<section>
+  <h2>3. 한눈에 보는 요약</h2>
+  <table class="sum">
+    <tr><th>입력 엣지</th><th>G₁ (↘ 차분)</th><th>G₂ (↗ 차분)</th><th>M = √(G₁²+G₂²)</th><th>해석</th></tr>
+    <tr>
+      <td class="l"><b>수직 |</b><br>(좌 0 → 우 255)</td>
+      <td>경계 <b>오른쪽</b> 열에 <span class="pos">+255</span></td>
+      <td>경계 <b>왼쪽</b> 열에 <span class="neg">−255</span></td>
+      <td>열 1~2에 걸친 <b>2px 띠</b>, 255</td>
+      <td class="l">두 마스크가 경계의 반대편에서 각각 반응</td>
+    </tr>
+    <tr>
+      <td class="l"><b>수평 —</b><br>(상 0 → 하 255)</td>
+      <td>경계 <b>아래</b> 행에 <span class="pos">+255</span></td>
+      <td>경계 <b>아래</b> 행에 <span class="pos">+255</span> (같은 자리)</td>
+      <td>행 2에 <b>1px 띠</b>, 360.6 → <b>255로 클리핑</b></td>
+      <td class="l">두 마스크가 같은 픽셀에서 동시에 반응</td>
+    </tr>
+    <tr>
+      <td class="l"><b>대각선 \</b><br>(우상단이 밝음)</td>
+      <td class="zero">전부 0 (무반응)</td>
+      <td>대각선을 따라 <span class="neg">−255</span></td>
+      <td>G₂ 자리 그대로</td>
+      <td class="l">↘ 방향으로는 밝기가 안 변함 → G₁ = 0</td>
+    </tr>
+    <tr>
+      <td class="l"><b>대각선 /</b><br>(우하단이 밝음)</td>
+      <td>대각선을 따라 <span class="pos">+255</span></td>
+      <td class="zero">전부 0 (무반응)</td>
+      <td>G₁ 자리 그대로</td>
+      <td class="l">↗ 방향으로는 밝기가 안 변함 → G₂ = 0</td>
+    </tr>
+  </table>
+  <p style="font-size:13.5px; color:#374151; margin-top:10px">
+    규칙: <b>마스크의 차분 방향과 평행한 엣지는 그 마스크에 잡히지 않는다</b>(그 방향으로 움직여도 같은 쪽에 머무르니까).
+    반대로 차분 방향을 가로질러 밝기가 바뀌는 엣지는 크게 잡힌다.
+  </p>
+</section>
+
+<section>
+  <h2>4. 원리 — 왜 이렇게 나올까? (법선 각도와 내적)</h2>
+  <p style="font-size:14.5px; line-height:1.8">
+    두 마스크는 사실 <b>서로 수직인 두 대각선 방향의 미분(차분)</b>입니다.
+    방향 벡터로 쓰면 <span class="tex" data-tex="d_1 = \tfrac{1}{\sqrt2}(1,1)\;(\searrow),\quad d_2 = \tfrac{1}{\sqrt2}(1,-1)\;(\nearrow)"></span> 이고
+    <span class="tex" data-tex="d_1 \cdot d_2 = \tfrac12(1\cdot1 + 1\cdot(-1)) = 0"></span> (직교).
+    엣지의 <b>법선</b>(밝기가 변하는 방향, 엣지 선에 수직)을 <span class="tex" data-tex="n=(\cos\theta,\sin\theta)"></span>라 하면 각 마스크의 반응은 내적에 비례합니다:
+  </p>
+  <p class="tex" data-tex="|G_1| \propto |n \cdot d_1| = |\cos(\theta-45^\circ)|, \qquad |G_2| \propto |n \cdot d_2| = |\cos(\theta+45^\circ)|"></p>
+  <p class="tex" data-tex="M \propto \sqrt{\cos^2(\theta-45^\circ) + \cos^2(\theta+45^\circ)} = 1 \quad (\theta\text{와 무관하게 일정!})"></p>
+  <p style="font-size:13.5px; color:#374151">
+    두 차분 방향이 직교하므로(두 항의 각도 차이가 정확히 90°) <b>엣지가 어느 방향이든 최종 크기 M은 같습니다</b> — 이것이 로버츠가 대각선 2개를 쓰는 이유입니다.
+    슬라이더로 법선 각도 θ를 돌려 보세요. 네 가지 특수 각이 위 5×5 예시와 정확히 대응됩니다.
+  </p>
+  <div class="flex-row" style="margin-top:14px">
+    <div>
+      <svg id="angsvg" width="240" height="240" style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px"></svg>
+      <div class="grid-sub">화면 좌표계: x = 열(→), y = 행(↓).<br>파란 화살표 = 엣지 법선 n, 노란 선 = 엣지 선(n에 수직).</div>
+    </div>
+    <div>
+      <div style="margin-bottom:8px">
+        θ = <b id="angval">0</b>° &nbsp;
+        <input type="range" id="ang" min="0" max="179" value="0">
+      </div>
+      <div class="ang-btns">
+        <button data-a="0">수직 엣지 (0°)</button>
+        <button data-a="90">수평 엣지 (90°)</button>
+        <button data-a="45">/ 대각선 (45°)</button>
+        <button data-a="135">\ 대각선 (135°)</button>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-col"><div class="bar-val" id="bv1">0.71</div><div class="bar" id="bar1" style="background:#2563eb"></div><div style="font-size:12.5px">|G₁|</div></div>
+        <div class="bar-col"><div class="bar-val" id="bv2">0.71</div><div class="bar" id="bar2" style="background:#dc2626"></div><div style="font-size:12.5px">|G₂|</div></div>
+        <div class="bar-col"><div class="bar-val" id="bvm">1.00</div><div class="bar" id="barm" style="background:#16a34a"></div><div style="font-size:12.5px">M (비례값)</div></div>
+      </div>
+      <div class="grid-sub" id="angnote" style="text-align:left; max-width:340px"></div>
+    </div>
+  </div>
+  <h3>가정과 실패 모드 (원리 수준에서)</h3>
+  <ul class="tight">
+    <li><b>가정</b>: "엣지 = 2×2 창 안에서 끝나는 급격한 밝기 변화". 마스크가 2×2라 평균화(스무딩)가 전혀 없어서, 이 가정이 깨지면(노이즈·부드러운 그래디언트) 성능이 급격히 나빠집니다. 그래서 실무에는 스무딩이 내장된 소벨(Sobel)을 더 많이 씁니다.</li>
+    <li><b>위치 추정</b>: 두 차분의 중심이 픽셀 사이에 걸쳐 있어 엣지 위치가 반 픽셀 어긋나고, 위 예시처럼 수직 엣지는 2px 두께로 나옵니다(마스크를 3×3 중심 앵커로 심은 구현 방식의 비대칭성 때문).</li>
+    <li><b>클리핑</b>: 수평 엣지처럼 두 마스크가 동시에 최대로 반응하면 M = √(255²+255²) ≈ 360.6이라 uint8 범위를 넘어 255로 잘립니다. 코드의 <code>np.clip(dst, 0, 255)</code>이 하는 일입니다.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5. 코드 대응표</h2>
+  <table class="sum">
+    <tr><th>수식</th><th>코드</th><th>위치</th></tr>
+    <tr><td class="l">G₁ = I(i,j) − I(i−1,j−1)</td><td class="l"><code>data1 = [-1,0,0, 0,1,0, 0,0,0]</code> → <code>filter(image, mask1)</code></td><td class="l"><code>chap07/03.edge_roberts.py</code> (data1, dst1)</td></tr>
+    <tr><td class="l">G₂ = I(i,j) − I(i−1,j+1)</td><td class="l"><code>data2 = [0,0,-1, 0,1,0, 0,0,0]</code> → <code>filter(image, mask2)</code></td><td class="l">같은 파일 (data2, dst2)</td></tr>
+    <tr><td class="l">M = √(G₁²+G₂²)</td><td class="l"><code>cv2.magnitude(dst1, dst2)</code></td><td class="l"><code>differential()</code> 내부</td></tr>
+    <tr><td class="l">유효 영역 i,j ∈ [1,3], 테두리 0</td><td class="l"><code>for i in range(ycenter, rows-ycenter)</code></td><td class="l"><code>Common/filters.py</code>의 <code>filter()</code></td></tr>
+    <tr><td class="l">[0,255] 클리핑 + uint8 변환</td><td class="l"><code>np.clip(dst, 0, 255).astype("uint8")</code></td><td class="l"><code>differential()</code> 내부</td></tr>
+  </table>
+</section>
+
+</main>
+<footer>생성: Copilot — chap07 로버츠 엣지 방향별 반응 시각화 · 모든 수치는 Common.filters.filter + cv2.magnitude로 검증됨</footer>
+
+<script>
+const N = 5;
+const CASES = [
+  { id:'v', tab:'① 수직 엣지 |', title:'수직 엣지 — 왼쪽 0, 오른쪽 255',
+    img: [[0,0,255,255,255],[0,0,255,255,255],[0,0,255,255,255],[0,0,255,255,255],[0,0,255,255,255]],
+    interp:'경계(열 1과 열 2 사이)를 중심 픽셀이 <b>오른쪽에서</b> 바라볼 때(열 2)는 왼쪽 위가 어두워서 G₁ = 255 − 0 = <b class="pos">+255</b>, ' +
+           '<b>왼쪽에서</b> 바라볼 때(열 1)는 오른쪽 위가 밝아서 G₂ = 0 − 255 = <b class="neg">−255</b>. ' +
+           '두 반응이 엇갈려 M은 열 1~2에 걸친 <b>2픽셀 두께의 띠</b>가 됩니다.' },
+  { id:'h', tab:'② 수평 엣지 —', title:'수평 엣지 — 위쪽 0, 아래쪽 255',
+    img: [[0,0,0,0,0],[0,0,0,0,0],[255,255,255,255,255],[255,255,255,255,255],[255,255,255,255,255]],
+    interp:'경계 바로 아래 행(행 2)에서는 왼쪽 위도 오른쪽 위도 둘 다 어두운 위쪽 영역이라 ' +
+           'G₁ = G₂ = 255 − 0 = <b class="pos">+255</b>가 <b>같은 픽셀에서 동시에</b> 나옵니다. ' +
+           '그래서 M = √(255²+255²) ≈ <b>360.6</b> → uint8로 변환하며 <b>255에 클리핑</b>. 1픽셀 두께의 띠입니다.' },
+  { id:'b', tab:'③ 대각선 엣지 \\', title:'대각선 \\ 엣지 — 오른쪽 위(우상단)가 255',
+    img: [[0,255,255,255,255],[0,0,255,255,255],[0,0,0,255,255],[0,0,0,0,255],[0,0,0,0,0]],
+    interp:'엣지 선이 \\ 방향(행 = 열 대각선)과 나란합니다. ↘ 방향(G₁의 차분 방향)으로 움직이면 항상 같은 쪽에 머물러 ' +
+           'G₁은 <b>전부 0</b>. 반면 ↗ 방향으로는 경계를 가로지르므로 G₂만 대각선을 따라 <b class="neg">−255</b>. ' +
+           '계단 모양 경계 때문에 반응이 2픽셀 두께로 나오는 구간도 있습니다.' },
+  { id:'f', tab:'④ 대각선 엣지 /', title:'대각선 / 엣지 — 오른쪽 아래(우하단)가 255',
+    img: [[0,0,0,0,255],[0,0,0,255,255],[0,0,255,255,255],[0,255,255,255,255],[255,255,255,255,255]],
+    interp:'엣지 선이 / 방향(반대각선)과 나란합니다. ↗ 방향(G₂의 차분 방향)으로 움직이면 같은 쪽에 머물러 ' +
+           'G₂는 <b>전부 0</b>. ↘ 방향으로는 경계를 가로지르므로 G₁만 대각선을 따라 <b class="pos">+255</b>. ' +
+           '③과 정확히 마스크가 뒤바뀐 대칭 상황입니다.' },
+];
+
+function zeros(){ return Array.from({length:N}, () => Array(N).fill(0)); }
+function roberts(img){
+  const g1 = zeros(), g2 = zeros(), mag = zeros();
+  for (let i = 1; i < N-1; i++) for (let j = 1; j < N-1; j++) {
+    g1[i][j] = img[i][j] - img[i-1][j-1];
+    g2[i][j] = img[i][j] - img[i-1][j+1];
+  }
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++)
+    mag[i][j] = Math.hypot(g1[i][j], g2[i][j]);
+  return {g1, g2, mag};
+}
+
+let cur = 0, sel = null;   // sel = {kind:'g1'|'g2'|'mag', i, j}
+
+function grayBg(v){ const g = Math.round(Math.min(Math.max(v,0),255)); return `rgb(${g},${g},${g})`; }
+function grayFg(v){ return v < 110 ? '#e5e7eb' : '#111827'; }
+function signedStyle(v){
+  if (v > 0) return `background: rgba(37,99,235,${0.12 + 0.75*Math.abs(v)/255}); color:#0f172a`;
+  if (v < 0) return `background: rgba(220,38,38,${0.12 + 0.75*Math.abs(v)/255}); color:#0f172a`;
+  return 'background:#f3f4f6; color:#9ca3af';
+}
+function fmt(v, signed){ if (signed && v !== 0) return (v>0?'+':'') + Math.round(v); return Math.abs(v % 1) > 1e-9 ? v.toFixed(1) : String(Math.round(v)); }
+
+function gridEl(mat, opts){
+  const g = document.createElement('div'); g.className = 'grid5';
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const c = document.createElement('div'); c.className = 'cell';
+    const v = mat[i][j];
+    if (opts.kind === 'gray') { c.style.background = grayBg(v); c.style.color = grayFg(v); c.textContent = Math.round(v); }
+    else if (opts.kind === 'signed') { c.style.cssText = signedStyle(v); c.textContent = fmt(v, true); }
+    else if (opts.kind === 'mag') { c.style.background = grayBg(v); c.style.color = grayFg(v); c.textContent = fmt(v, false); }
+    c.dataset.i = i; c.dataset.j = j;
+    if (opts.click) { c.classList.add('clickable'); c.addEventListener('click', () => { sel = {kind: opts.kind, i, j}; render(); }); }
+    if (sel && opts.kind === sel.kind && sel.i === i && sel.j === j) c.classList.add('sel');
+    if (opts.kind === 'input' && sel) {
+      const {kind, i: si, j: sj} = sel;
+      const pairs = [];
+      if (kind === 'g1' || kind === 'mag') pairs.push({r: si-1, c: sj-1, cls: 'hl-neg'});
+      if (kind === 'g2' || kind === 'mag') pairs.push({r: si-1, c: sj+1, cls: 'hl-neg'});
+      pairs.push({r: si, c: sj, cls: 'hl-pos'});
+      for (const p of pairs) if (p.r === i && p.c === j) c.classList.add(p.cls);
+    }
+    g.appendChild(c);
+  }
+  return g;
+}
+
+function panel(label, sub, el){
+  const d = document.createElement('div');
+  const l = document.createElement('div'); l.className = 'grid-label'; l.innerHTML = label;
+  d.appendChild(l); d.appendChild(el);
+  if (sub) { const s = document.createElement('div'); s.className = 'grid-sub'; s.style.maxWidth = '290px'; s.innerHTML = sub; d.appendChild(s); }
+  return d;
+}
+
+function render(){
+  const cs = CASES[cur], r = roberts(cs.img);
+  const tabs = document.getElementById('tabs'); tabs.innerHTML = '';
+  CASES.forEach((c, k) => {
+    const b = document.createElement('button'); b.textContent = c.tab;
+    if (k === cur) b.classList.add('active');
+    b.addEventListener('click', () => { cur = k; sel = null; render(); });
+    tabs.appendChild(b);
+  });
+
+  const body = document.getElementById('case-body'); body.innerHTML = '';
+  const h = document.createElement('h3'); h.textContent = cs.title; body.appendChild(h);
+  const row = document.createElement('div'); row.className = 'panel';
+  row.appendChild(panel('입력 I (5×5)', '0 = 검정, 255 = 흰색', gridEl(cs.img, {kind:'gray'})));
+  row.appendChild(panel('G₁ (↘ 차분, 부호 있음)', '파랑 = 양수, 빨강 = 음수.<br>클릭 → I(i,j) − I(i−1,j−1) 계산 보기', gridEl(r.g1, {kind:'signed', click:true})));
+  row.appendChild(panel('G₂ (↗ 차분, 부호 있음)', '클릭 → I(i,j) − I(i−1,j+1) 계산 보기', gridEl(r.g2, {kind:'signed', click:true})));
+  row.appendChild(panel('M = √(G₁²+G₂²)', '클릭 → 크기 계산 보기.<br>360.6처럼 255 초과는 클리핑됨', gridEl(r.mag, {kind:'mag', click:true})));
+  body.appendChild(row);
+
+  const box = document.getElementById('calcbox');
+  if (!sel) {
+    box.innerHTML = '<span class="hint">G₁, G₂, M 격자의 셀을 클릭하면 계산 과정이 여기에 표시됩니다. (파란 테두리 = +1이 곱해진 중심 픽셀, 빨간 테두리 = −1이 곱해진 대각선 이웃)</span>';
+  } else {
+    const {kind, i, j} = sel, img = cs.img;
+    if (i < 1 || i > N-2 || j < 1 || j > N-2) {
+      box.innerHTML = `<span class="hint">(${i}, ${j})은 테두리라 회선을 적용하지 않습니다 — <code>filter()</code>는 마스크 중심이 i, j ∈ [1, 3]일 때만 계산하고 나머지는 0으로 둡니다.</span>`;
+    } else if (kind === 'g1') {
+      box.innerHTML = `G₁(${i}, ${j}) = I(${i}, ${j}) − I(${i-1}, ${j-1}) = ${img[i][j]} − ${img[i-1][j-1]} = <b class="${r.g1[i][j]>=0?'pos':'neg'}">${fmt(r.g1[i][j], true)}</b>`;
+    } else if (kind === 'g2') {
+      box.innerHTML = `G₂(${i}, ${j}) = I(${i}, ${j}) − I(${i-1}, ${j+1}) = ${img[i][j]} − ${img[i-1][j+1]} = <b class="${r.g2[i][j]>=0?'pos':'neg'}">${fmt(r.g2[i][j], true)}</b>`;
+    } else {
+      const a = r.g1[i][j], b = r.g2[i][j], m = r.mag[i][j];
+      box.innerHTML = `M(${i}, ${j}) = √(G₁² + G₂²) = √((${fmt(a,true)})² + (${fmt(b,true)})²) = √${Math.round(a*a + b*b)} = <b>${m.toFixed(1)}</b>` +
+        (m > 255 ? ` → uint8 변환 시 <b>255로 클리핑</b>` : ``);
+    }
+  }
+  document.getElementById('interp').innerHTML = '💡 <b>해석:</b> ' + cs.interp;
+}
+
+// ---- 각도 위젯 ----
+const svg = document.getElementById('angsvg');
+const NS = 'http://www.w3.org/2000/svg';
+function line(x1,y1,x2,y2,stroke,w,dash){
+  const l = document.createElementNS(NS,'line');
+  l.setAttribute('x1',x1); l.setAttribute('y1',y1); l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+  l.setAttribute('stroke',stroke); l.setAttribute('stroke-width',w);
+  if (dash) l.setAttribute('stroke-dasharray',dash);
+  svg.appendChild(l); return l;
+}
+function arrow(x1,y1,x2,y2,stroke){
+  const l = line(x1,y1,x2,y2,stroke,3);
+  l.setAttribute('marker-end','url(#ah)');
+  return l;
+}
+function drawAngle(thDeg){
+  svg.innerHTML = '';
+  const defs = document.createElementNS(NS,'defs');
+  defs.innerHTML = '<marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#2563eb"/></marker>';
+  svg.appendChild(defs);
+  const cx = 120, cy = 120, L = 95;
+  // 기준 차분 방향 d1(45°), d2(-45°) — 양방향 점선
+  for (const [a, col] of [[45,'#93c5fd'],[-45,'#fca5a5']]) {
+    const r = a*Math.PI/180, dx = Math.cos(r)*L, dy = Math.sin(r)*L;
+    line(cx-dx, cy-dy, cx+dx, cy+dy, col, 2, '5 4');
+  }
+  // 엣지 선 (법선에 수직) — 노란 실선
+  const te = (thDeg+90)*Math.PI/180, ex = Math.cos(te)*L, ey = Math.sin(te)*L;
+  line(cx-ex, cy-ey, cx+ex, cy+ey, '#eab308', 4);
+  // 법선 화살표
+  const tn = thDeg*Math.PI/180, nx = Math.cos(tn)*L*0.8, ny = Math.sin(tn)*L*0.8;
+  arrow(cx, cy, cx+nx, cy+ny, '#2563eb');
+  // 라벨
+  const t1 = document.createElementNS(NS,'text'); t1.setAttribute('x', cx+Math.cos(Math.PI/4)*L*0.62); t1.setAttribute('y', cy+Math.sin(Math.PI/4)*L*0.62+14); t1.setAttribute('font-size','12'); t1.setAttribute('fill','#1d4ed8'); t1.textContent = 'd₁(↘)'; svg.appendChild(t1);
+  const t2 = document.createElementNS(NS,'text'); t2.setAttribute('x', cx+Math.cos(-Math.PI/4)*L*0.62-6); t2.setAttribute('y', cy+Math.sin(-Math.PI/4)*L*0.62-6); t2.setAttribute('font-size','12'); t2.setAttribute('fill','#b91c1c'); t2.textContent = 'd₂(↗)'; svg.appendChild(t2);
+  const t3 = document.createElementNS(NS,'text'); t3.setAttribute('x', cx+nx*1.06-6); t3.setAttribute('y', cy+ny*1.06+4); t3.setAttribute('font-size','13'); t3.setAttribute('font-weight','bold'); t3.setAttribute('fill','#1d4ed8'); t3.textContent = 'n'; svg.appendChild(t3);
+}
+function updateAngle(){
+  const th = +document.getElementById('ang').value;
+  document.getElementById('angval').textContent = th;
+  const g1 = Math.abs(Math.cos((th-45)*Math.PI/180));
+  const g2 = Math.abs(Math.cos((th+45)*Math.PI/180));
+  const m = Math.hypot(g1, g2);
+  document.getElementById('bar1').style.height = (g1*120)+'px';
+  document.getElementById('bar2').style.height = (g2*120)+'px';
+  document.getElementById('barm').style.height = (m*120)+'px';
+  document.getElementById('bv1').textContent = g1.toFixed(2);
+  document.getElementById('bv2').textContent = g2.toFixed(2);
+  document.getElementById('bvm').textContent = m.toFixed(2);
+  const notes = {0:'수직 엣지: 법선이 → 방향. 두 대각선과 각각 45°라 |G₁| = |G₂| ≈ 0.71로 같음 → 두 마스크 모두 반응 (예시 ①).',
+                 90:'수평 엣지: 법선이 ↓ 방향. 역시 두 대각선과 45°씩 → 두 마스크 모두 반응 (예시 ②).',
+                 45:'/ 대각선 엣지: 법선이 ↘ = d₁과 나란 → G₁만 최대, G₂ = 0 (예시 ④).',
+                 135:'\\ 대각선 엣지: 법선이 ↗ = d₂와 나란 → G₂만 최대, G₁ = 0 (예시 ③).'};
+  document.getElementById('angnote').textContent = notes[th] || 'θ를 돌려도 M(초록 막대)은 항상 1.00 — 두 차분 방향이 직교하기 때문입니다.';
+  drawAngle(th);
+}
+document.getElementById('ang').addEventListener('input', updateAngle);
+document.querySelectorAll('.ang-btns button').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('ang').value = b.dataset.a; updateAngle();
+}));
+
+if (window.katex) document.querySelectorAll('.tex').forEach(el => {
+  try { katex.render(el.dataset.tex, el, {throwOnError:false}); } catch(e) { el.textContent = el.dataset.tex; }
+});
+else document.querySelectorAll('.tex').forEach(el => el.textContent = el.dataset.tex);
+
+render();
+updateAngle();
+</script>
+</body>
+</html>
